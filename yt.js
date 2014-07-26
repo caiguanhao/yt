@@ -10,8 +10,14 @@ var htmlparser = require('htmlparser2');
 var spawn      = require('child_process').spawn;
 
 var COLUMNS    = process.stdout.columns || 80;
+var ROWS       = process.stdout.rows || 24;
 var CookieFile = path.join(getUserHome(), '.config', 'yt', 'cookie.json');
 var COOKIE;
+
+var colMax = COLUMNS - 4;
+var rowMax = ROWS - 2;
+
+var ITEMSPERPAGE = 16;
 
 var INSTRUCTIONS = 'Follow these steps and then run this command again:\n' +
 '1. Open Google Chrome and right click the page and select Inspect Element.\n' +
@@ -24,11 +30,19 @@ then(function(cookie) {
   COOKIE = cookie;
 }).
 then(function() {
-  return request();
+  var pages = Math.ceil(rowMax / ITEMSPERPAGE);
+  var requests = Array.apply(undefined, {
+    length: pages
+  }).map(Function.call, function(i) {
+    return request(i + 1);
+  });
+  return Q.all(requests);
 }).
 then(function(res) {
-  var data = JSON.parse(res.body);
-  var html = data.content_html;
+  var html = '';
+  for (var i = 0; i < res.length; i++) {
+    html += JSON.parse(res[i].body).content_html;
+  }
   return analyze(html);
 }).
 then(function(data) {
@@ -124,10 +138,10 @@ function getClipboard() {
   return deferred.promise;
 }
 
-function request() {
+function request(page) {
   var deferred = Q.defer();
   var reqpath = '/feed_ajax?feed_name=subscriptions&action_load_system_feed=1';
-  reqpath += '&paging=1';
+  reqpath += '&paging=' + ((page - 1) * ITEMSPERPAGE + 1 );
   var req = https.request({
     host: 'www.youtube.com',
     port: 443,
@@ -183,12 +197,11 @@ function slice(str, len) {
 }
 
 function makeMenu(items) {
-  var width = COLUMNS - 4;
-  var menu = termMenu({ width: width });
+  var menu = termMenu({ width: colMax });
   menu.reset();
   menu.write('');
-  for (var i = 0; i < items.length; i++) {
-    menu.add(slice(items[i].title, width));
+  for (var i = 0; i < Math.min(rowMax, items.length); i++) {
+    menu.add(slice(items[i].title, colMax));
   }
   menu.on('select', function (label, index) {
     var url = 'http://www.youtube.com' + items[index].href;
