@@ -1,6 +1,6 @@
 {
   "name": "yt",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "Open your YouTube subscription videos from terminal.",
   "repository": {
     "type": "git",
