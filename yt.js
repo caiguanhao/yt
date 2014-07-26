@@ -41,7 +41,7 @@ then(function() {
 then(function(res) {
   var html = '';
   for (var i = 0; i < res.length; i++) {
-    html += JSON.parse(res[i].body).content_html;
+    html += res[i].body;
   }
   return analyze(html);
 }).
@@ -140,8 +140,13 @@ function getClipboard() {
 
 function request(page) {
   var deferred = Q.defer();
-  var reqpath = '/feed_ajax?feed_name=subscriptions&action_load_system_feed=1';
-  reqpath += '&paging=' + ((page - 1) * ITEMSPERPAGE + 1 );
+  var reqpath;
+  if (page < 2) {
+    reqpath = '/feed/subscriptions';
+  } else {
+    reqpath = '/feed_ajax?feed_name=subscriptions&action_load_system_feed=1';
+    reqpath += '&paging=' + ((page - 1) * ITEMSPERPAGE);
+  }
   var req = https.request({
     host: 'www.youtube.com',
     port: 443,
@@ -157,6 +162,9 @@ function request(page) {
       body += chunk;
     });
     res.on('end', function() {
+      if (page >= 2) {
+        body = JSON.parse(body).content_html;
+      }
       deferred.resolve({
         headers: res.headers,
         body: body
@@ -196,12 +204,16 @@ function slice(str, len) {
   return str.slice(0, len - (str.match(/[^\u0000-\u00ff]/g) || '').length);
 }
 
+function pad(n) {
+  return (n < 10 ? '0' : '') + n;
+}
+
 function makeMenu(items) {
   var menu = termMenu({ width: colMax });
   menu.reset();
   menu.write('');
   for (var i = 0; i < Math.min(rowMax, items.length); i++) {
-    menu.add(slice(items[i].title, colMax));
+    menu.add(slice(pad(i + 1) + '. ' + items[i].title, colMax));
   }
   menu.on('select', function (label, index) {
     var url = 'http://www.youtube.com' + items[index].href;
