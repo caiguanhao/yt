@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 var Q          = require('q');
 var fs         = require('fs');
 var path       = require('path');
@@ -166,9 +168,6 @@ function analyze(content) {
         });
       }
     },
-    ontext: function(text) {
-
-    },
     onend: function(tagname) {
       deferred.resolve(ret);
     }
@@ -190,7 +189,7 @@ function makeMenu(items) {
   menu.write('');
   for (var i = 0; i < items.length; i++) {
     menu.add(slice(items[i].title, width));
-  };
+  }
   menu.on('select', function (label, index) {
     var url = 'http://www.youtube.com' + items[index].href;
     spawn('livestreamer', [ url, '360p' ]);

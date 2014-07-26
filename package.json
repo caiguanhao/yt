@@ -10,6 +10,9 @@
     "YouTube",
     "videos"
   ],
+  "bin": {
+    "yt": "yt.js"
+  },
   "author": "Cai Guanhao (Choi Goon-ho)",
   "license": "MIT",
   "bugs": {
