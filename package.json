@@ -1,0 +1,25 @@
+{
+  "name": "yt",
+  "version": "0.0.0",
+  "description": "Open your YouTube subscription videos from terminal.",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/caiguanhao/yt.git"
+  },
+  "keywords": [
+    "YouTube",
+    "videos"
+  ],
+  "author": "Cai Guanhao (Choi Goon-ho)",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/caiguanhao/yt/issues"
+  },
+  "homepage": "https://github.com/caiguanhao/yt",
+  "dependencies": {
+    "q": "^1.0.1",
+    "htmlparser2": "^3.7.3",
+    "entities": "^1.1.1",
+    "terminal-menu-2": "0.0.0"
+  }
+}
