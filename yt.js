@@ -7,6 +7,7 @@ var libdata    = require('./data');
 var entities   = require('entities');
 var termMenu   = require('terminal-menu-2');
 var htmlparser = require('htmlparser2');
+var exec       = require('child_process').exec;
 var spawn      = require('child_process').spawn;
 
 var OPTIONS    = require('./getopts');
@@ -19,7 +20,9 @@ var rowMax = ROWS - 2;
 
 var ITEMSPERPAGE = 16;
 
-var RUNNING = [], ITEMS = [];
+var RUNNING = {}, ITEMS = [];
+
+var INDICATOR_ON = ' ◉ ', INDICATOR_OFF = ' ◯ ';
 
 Q().
 then(function() {
@@ -56,22 +59,32 @@ then(function(data) {
     makeMenu();
   }
 }).
-catch(console.error);
+catch(function(err) {
+  if (MENU) {
+    MENU.reset();
+    MENU.close();
+  }
+  console.error(err.stack ? err.stack : err);
+  process.exit(1);
+});
 
 
 
 var ytEvents = new events.EventEmitter();
 
 ytEvents.on('start', function(index) {
-  MENU.items[index].label = ' ◉ ' + MENU.items[index].label.slice(3);
-  MENU._drawRow(index);
   var url = ITEMS[index].url;
-  if (RUNNING.indexOf(url) === -1) RUNNING.push(url);
+  if (MENU.items[index].label.slice(0, 3) === INDICATOR_ON) {
+    return killall(RUNNING[url].pid);
+  }
+  MENU.items[index].label = INDICATOR_ON + MENU.items[index].label.slice(3);
+  MENU._drawRow(index);
   // use --player-no-close to prevent video player exiting too early
   var livestreamer = spawn('livestreamer', [ '--player-no-close', url, '360p' ]);
-  livestreamer.on('exit', function(code) {
+  livestreamer.on('exit', function() {
     ytEvents.emit('end', url);
   });
+  RUNNING[url] = livestreamer;
 });
 
 ytEvents.on('end', function(url) {
@@ -83,14 +96,23 @@ ytEvents.on('end', function(url) {
     }
   }
   if (index > -1) {
-    MENU.items[index].label = ' ◯ ' + MENU.items[index].label.slice(3);
+    MENU.items[index].label = INDICATOR_OFF + MENU.items[index].label.slice(3);
     MENU._drawRow(index);
   }
-  var index = RUNNING.indexOf(url);
-  if (index > -1) RUNNING.splice(index, 1);
+  delete RUNNING[url];
 });
 
-
+function killall(pid) {
+  exec('pgrep -P ' + pid, function(error, stdout, stderr) {
+    if (stdout) {
+      var pids = stdout.trim().split('\n');
+      pids.forEach(function(pid) {
+        if (pid) process.kill(pid, 'SIGKILL');
+      });
+      process.kill(pid, 'SIGKILL');
+    }
+  });
+}
 
 function arrayEquals(a, b) {
   return JSON.stringify(a) === JSON.stringify(b);
@@ -181,7 +203,8 @@ function makeMenu() {
   MENU.write('');
   var indLen = 1; // indicator length is 2 in `slice`, so distract 1
   for (var i = 0; i < Math.min(rowMax, ITEMS.length); i++) {
-    var indicator = RUNNING.indexOf(ITEMS[i].url) === -1 ? ' ◯ ' : ' ◉ ';
+    var indicator = INDICATOR_OFF;
+    if (RUNNING.hasOwnProperty(ITEMS[i].url)) indicator = INDICATOR_ON;
     var title = ITEMS[i].title;
     MENU.add(slice(indicator + pad(i + 1) + '. ' + title, colMax + indLen));
   }
