@@ -3,6 +3,7 @@
 var Q          = require('q');
 var fs         = require('fs');
 var path       = require('path');
+var events     = require('events');
 var https      = require('https');
 var entities   = require('entities');
 var termMenu   = require('terminal-menu-2');
@@ -14,7 +15,7 @@ var ROWS       = process.stdout.rows || 24;
 var YTDir      = path.join(getUserHome(), '.config', 'yt');
 var CookieFile = path.join(YTDir, 'cookie.json');
 var CacheFile  = path.join(YTDir, 'cache.json');
-var COOKIE, CACHE, Menu;
+var COOKIE, MENU;
 
 var colMax = COLUMNS - 4;
 var rowMax = ROWS - 2;
@@ -27,10 +28,12 @@ var INSTRUCTIONS = 'Follow these steps and then run this command again:\n' +
 '3. In Networks tab, click Documents and right click the first item in the \n' +
 '   list and click Copy as cURL.';
 
+var RUNNING = [], ITEMS = [];
+
 Q().
 then(function() {
-  CACHE = readCache();
-  if (CACHE) makeMenu(CACHE);
+  ITEMS = readCache();
+  makeMenu();
 }).
 then(function() {
   return checkConf();
@@ -55,12 +58,47 @@ then(function(res) {
   return analyze(html);
 }).
 then(function(data) {
-  if (!arrayEquals(CACHE, data)) {
+  if (!arrayEquals(ITEMS, data)) {
     createCache(data);
-    makeMenu(data);
+    ITEMS = data;
+    makeMenu();
   }
 }).
 catch(console.error);
+
+
+
+var ytEvents = new events.EventEmitter();
+
+ytEvents.on('start', function(index) {
+  MENU.items[index].label = ' ◉ ' + MENU.items[index].label.slice(3);
+  MENU._drawRow(index);
+  var url = ITEMS[index].url;
+  if (RUNNING.indexOf(url) === -1) RUNNING.push(url);
+  // use --player-no-close to prevent video player exiting too early
+  var livestreamer = spawn('livestreamer', [ '--player-no-close', url, '360p' ]);
+  livestreamer.on('exit', function(code) {
+    ytEvents.emit('end', url);
+  });
+});
+
+ytEvents.on('end', function(url) {
+  var index = -1;
+  for (var i = 0; i < ITEMS.length; i++) {
+    if (ITEMS[i].url === url) {
+      index = i;
+      break;
+    }
+  }
+  if (index > -1) {
+    MENU.items[index].label = ' ◯ ' + MENU.items[index].label.slice(3);
+    MENU._drawRow(index);
+  }
+  var index = RUNNING.indexOf(url);
+  if (index > -1) RUNNING.splice(index, 1);
+});
+
+
 
 function getUserHome() {
   return process.env.HOME || process.env.HOMEPATH || process.env.USERPROFILE;
@@ -216,7 +254,7 @@ function analyze(content) {
     onopentag: function(name, attribs) {
       if (name === 'a' && attribs.title && /^\/watch/.test(attribs.href)) {
         ret.push({
-          href: attribs.href,
+          url: 'http://www.youtube.com' + attribs.href,
           title: attribs.title
         });
       }
@@ -239,21 +277,20 @@ function pad(n) {
   return (n < 10 ? '0' : '') + n;
 }
 
-function makeMenu(items) {
-  if (Menu) {
-    Menu.reset();
-    Menu.close();
+function makeMenu() {
+  if (MENU) {
+    MENU.reset();
+    MENU.close();
   }
-  Menu = termMenu({ width: colMax });
-  Menu.reset();
-  Menu.write('');
-  for (var i = 0; i < Math.min(rowMax, items.length); i++) {
-    Menu.add(slice(pad(i + 1) + '. ' + items[i].title, colMax));
+  MENU = termMenu({ width: colMax });
+  MENU.reset();
+  MENU.write('');
+  for (var i = 0; i < Math.min(rowMax, ITEMS.length); i++) {
+    var r = RUNNING.indexOf(ITEMS[i].url) === -1 ? ' ◯ ' : ' ◉ ';
+    MENU.add(slice(r + pad(i + 1) + '. ' + ITEMS[i].title, colMax));
   }
-  Menu.on('select', function (label, index) {
-    var url = 'http://www.youtube.com' + items[index].href;
-    // use --player-no-close to prevent video player exiting too early
-    spawn('livestreamer', [ '--player-no-close', url, '360p' ]);
+  MENU.on('select', function (label, index) {
+    ytEvents.emit('start', index);
   });
-  Menu.createStream().pipe(process.stdout);
+  MENU.createStream().pipe(process.stdout);
 }
