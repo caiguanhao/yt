@@ -217,7 +217,8 @@ function makeMenu(items) {
   }
   menu.on('select', function (label, index) {
     var url = 'http://www.youtube.com' + items[index].href;
-    spawn('livestreamer', [ url, '360p' ]);
+    // use --player-no-close to prevent video player exiting too early
+    spawn('livestreamer', [ '--player-no-close', url, '360p' ]);
   });
   menu.createStream().pipe(process.stdout);
 }
