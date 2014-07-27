@@ -11,8 +11,10 @@ var spawn      = require('child_process').spawn;
 
 var COLUMNS    = process.stdout.columns || 80;
 var ROWS       = process.stdout.rows || 24;
-var CookieFile = path.join(getUserHome(), '.config', 'yt', 'cookie.json');
-var COOKIE;
+var YTDir      = path.join(getUserHome(), '.config', 'yt');
+var CookieFile = path.join(YTDir, 'cookie.json');
+var CacheFile  = path.join(YTDir, 'cache.json');
+var COOKIE, CACHE, Menu;
 
 var colMax = COLUMNS - 4;
 var rowMax = ROWS - 2;
@@ -25,7 +27,14 @@ var INSTRUCTIONS = 'Follow these steps and then run this command again:\n' +
 '3. In Networks tab, click Documents and right click the first item in the \n' +
 '   list and click Copy as cURL.';
 
-checkConf().
+Q().
+then(function() {
+  CACHE = readCache();
+  if (CACHE) makeMenu(CACHE);
+}).
+then(function() {
+  return checkConf();
+}).
 then(function(cookie) {
   COOKIE = cookie;
 }).
@@ -46,7 +55,10 @@ then(function(res) {
   return analyze(html);
 }).
 then(function(data) {
-  makeMenu(data);
+  if (!arrayEquals(CACHE, data)) {
+    createCache(data);
+    makeMenu(data);
+  }
 }).
 catch(console.error);
 
@@ -62,6 +74,10 @@ function mkdirp(dirpath) {
     } catch(e) {}
     return parts;
   }, '');
+}
+
+function arrayEquals(a, b) {
+  return JSON.stringify(a) === JSON.stringify(b);
 }
 
 function isStr(what) {
@@ -85,19 +101,34 @@ function readConf() {
   }
 }
 
-function createConf(object) {
-  var dir = path.dirname(CookieFile);
-  if (!fs.existsSync(dir)) {
-    mkdirp(dir);
-  } else if (!fs.statSync(dir).isDirectory()) {
-    fs.unlinkSync(dir);
-    mkdirp(dir);
+function readCache() {
+  try {
+    return JSON.parse(fs.readFileSync(CacheFile).toString());
+  } catch(e) {
+    return undefined;
+  }
+}
+
+function createFile(filepath, data) {
+  if (!fs.existsSync(YTDir)) {
+    mkdirp(YTDir);
+  } else if (!fs.statSync(YTDir).isDirectory()) {
+    fs.unlinkSync(YTDir);
+    mkdirp(YTDir);
   }
   fs.writeFileSync(
-    CookieFile,
-    JSON.stringify(object, undefined, 2),
+    filepath,
+    JSON.stringify(data, undefined, 2),
     { mode: 0600 }
   );
+}
+
+function createConf(data) {
+  createFile(CookieFile, data);
+}
+
+function createCache(data) {
+  createFile(CacheFile, data);
 }
 
 function checkConf() {
@@ -209,16 +240,20 @@ function pad(n) {
 }
 
 function makeMenu(items) {
-  var menu = termMenu({ width: colMax });
-  menu.reset();
-  menu.write('');
-  for (var i = 0; i < Math.min(rowMax, items.length); i++) {
-    menu.add(slice(pad(i + 1) + '. ' + items[i].title, colMax));
+  if (Menu) {
+    Menu.reset();
+    Menu.close();
   }
-  menu.on('select', function (label, index) {
+  Menu = termMenu({ width: colMax });
+  Menu.reset();
+  Menu.write('');
+  for (var i = 0; i < Math.min(rowMax, items.length); i++) {
+    Menu.add(slice(pad(i + 1) + '. ' + items[i].title, colMax));
+  }
+  Menu.on('select', function (label, index) {
     var url = 'http://www.youtube.com' + items[index].href;
     // use --player-no-close to prevent video player exiting too early
     spawn('livestreamer', [ '--player-no-close', url, '360p' ]);
   });
-  menu.createStream().pipe(process.stdout);
+  Menu.createStream().pipe(process.stdout);
 }
