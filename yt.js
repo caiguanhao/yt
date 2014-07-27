@@ -278,7 +278,9 @@ function pad(n) {
 }
 
 function makeMenu() {
+  var selected = -1;
   if (MENU) {
+    selected = MENU.selected;
     MENU.reset();
     MENU.close();
   }
@@ -289,6 +291,7 @@ function makeMenu() {
     var r = RUNNING.indexOf(ITEMS[i].url) === -1 ? ' ◯ ' : ' ◉ ';
     MENU.add(slice(r + pad(i + 1) + '. ' + ITEMS[i].title, colMax));
   }
+  if (selected > -1) MENU.selected = selected;
   MENU.on('select', function (label, index) {
     ytEvents.emit('start', index);
   });
