@@ -9,6 +9,7 @@ var termMenu   = require('terminal-menu-2');
 var htmlparser = require('htmlparser2');
 var spawn      = require('child_process').spawn;
 
+var OPTIONS    = require('./getopts');
 var COLUMNS    = process.stdout.columns || 80;
 var ROWS       = process.stdout.rows || 24;
 var COOKIE, MENU;
@@ -32,6 +33,7 @@ then(function(cookie) {
   COOKIE = cookie;
 }).
 then(function() {
+  if (!MENU) process.stdout.write('Retrieving list of videos ... ');
   var pages = Math.ceil(rowMax / ITEMSPERPAGE);
   var requests = Array.apply(undefined, {
     length: pages
@@ -174,12 +176,14 @@ function makeMenu() {
     MENU.reset();
     MENU.close();
   }
-  MENU = termMenu({ width: colMax });
+  MENU = termMenu({ width: colMax, fg: OPTIONS.fg, bg: OPTIONS.bg });
   MENU.reset();
   MENU.write('');
+  var indLen = 1; // indicator length is 2 in `slice`, so distract 1
   for (var i = 0; i < Math.min(rowMax, ITEMS.length); i++) {
-    var r = RUNNING.indexOf(ITEMS[i].url) === -1 ? ' ◯ ' : ' ◉ ';
-    MENU.add(slice(r + pad(i + 1) + '. ' + ITEMS[i].title, colMax));
+    var indicator = RUNNING.indexOf(ITEMS[i].url) === -1 ? ' ◯ ' : ' ◉ ';
+    var title = ITEMS[i].title;
+    MENU.add(slice(indicator + pad(i + 1) + '. ' + title, colMax + indLen));
   }
   if (selected > -1) MENU.selected = selected;
   MENU.on('select', function (label, index) {
