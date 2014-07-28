@@ -84,7 +84,7 @@ ytEvents.on('start', function(index) {
   // so we use verbose stderr to see when the video really ends
   var livestreamer = spawn('livestreamer', [
     '--player-no-close',
-    url, '240p',
+    url, OPTIONS.f,
     '--player-args', '--video-on-top {filename} --verbose 2',
     '--verbose-player'
   ]);
