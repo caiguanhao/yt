@@ -80,7 +80,20 @@ ytEvents.on('start', function(index) {
   MENU.items[index].label = INDICATOR_ON + MENU.items[index].label.slice(3);
   MENU._drawRow(index);
   // use --player-no-close to prevent video player exiting too early
-  var livestreamer = spawn('livestreamer', [ '--player-no-close', url, '360p' ]);
+  // vlc's --play-and-exit option does not work in Mac OS X
+  // so we use verbose stderr to see when the video really ends
+  var livestreamer = spawn('livestreamer', [
+    '--player-no-close',
+    url, '240p',
+    '--player-args', '--video-on-top {filename} --verbose 2',
+    '--verbose-player'
+  ]);
+  livestreamer.stderr.on('data', function(chunk) {
+    if (chunk.toString().indexOf('finished input') > -1) {
+      if (!RUNNING[url]) return;
+      killall(RUNNING[url].pid);
+    }
+  });
   livestreamer.on('exit', function() {
     ytEvents.emit('end', url);
   });
@@ -103,14 +116,15 @@ ytEvents.on('end', function(url) {
 });
 
 function killall(pid) {
+  if (!pid) return;
   exec('pgrep -P ' + pid, function(error, stdout, stderr) {
     if (stdout) {
       var pids = stdout.trim().split('\n');
       pids.forEach(function(pid) {
         if (pid) process.kill(pid, 'SIGKILL');
       });
-      process.kill(pid, 'SIGKILL');
     }
+    process.kill(pid, 'SIGKILL');
   });
 }
 
