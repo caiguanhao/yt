@@ -125,6 +125,22 @@ function arrayEquals(a, b) {
   return JSON.stringify(a) === JSON.stringify(b);
 }
 
+// split('一a二b三c四五六七', 3) = ["一a", "二b", "三c", "四", "五", "六", "七"]
+function split(str, len) {
+  if (len < 1) len = 1;
+  var chunks = [];
+  while (str) {
+    var s = '', c = 0;
+    for (var i = 0; str[i] && i < len - c; i++) {
+      if (/[^\u0000-\u00ff]/.test(str[i])) c++;
+      if (i + 1 <= len - c) s += str[i];
+    }
+    chunks.push(s);
+    str = str.slice(s.length);
+  }
+  return chunks;
+}
+
 function slice(str, len) {
   str = entities.decodeHTML(str);
   return str.slice(0, len - (str.match(/[^\u0000-\u00ff]/g) || '').length);
@@ -164,3 +180,45 @@ function makeMenu() {
   });
   MENU.createStream().pipe(process.stdout);
 }
+
+function makeDetailsPage() {
+  if (MENU) {
+    selected = MENU.selected;
+    MENU.reset();
+    MENU.close();
+  }
+  var ITEM = ITEMS[selected];
+  MENU = termMenu({ width: colMax, fg: OPTIONS.fg, bg: OPTIONS.bg });
+  MENU.detailsPage = true;
+  MENU.reset();
+  MENU.write('Title:\n');
+  split(ITEM.title, colMax - 2).forEach(function(line) {
+    MENU.write(line + '\n');
+  });
+  MENU.write('\n');
+  var username = ITEM.username;
+  if (ITEM.verified) username += ' (verified)'
+  MENU.write('By: ' + username + '\n');
+  MENU.write('\n');
+  MENU.write('Description:\n');
+  split(ITEM.description, colMax - 2).forEach(function(line) {
+    MENU.write(line + '\n');
+  });
+  MENU.write('\n');
+  MENU.add('URL:   ' + ITEM.url);
+  MENU.write('\n');
+  MENU.write(ITEM.time + ' - ' + ITEM.views + '\n');
+  MENU.createStream().pipe(process.stdout);
+}
+
+process.stdin.on('data', function(buf) {
+  if (!MENU) return;
+  var codes = [].join.call(buf, '.');
+  if (MENU.detailsPage && codes === '27.91.68') {             // left
+    MENU.reset();
+    MENU.close();
+    makeMenu();
+  } else if (!MENU.detailsPage && codes === '27.91.67') {      // right
+    makeDetailsPage();
+  }
+});
