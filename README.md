@@ -10,7 +10,7 @@ subscription and sort them by date. It is very inefficient.
 
 If you installed `yt` globally, you can open your YouTube subscription videos
 from terminal. Requires [livestreamer](https://github.com/chrippa/livestreamer)
-and VLC player. Currently works only on Mac OS X.
+and VLC player. Currently works on Mac OS X and Linux.
 
 ```
 pip install livestreamer

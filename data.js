@@ -7,11 +7,12 @@ var YTDir      = path.join(getUserHome(), '.config', 'yt');
 var CookieFile = path.join(YTDir, 'cookie.json');
 var CacheFile  = path.join(YTDir, 'cache.json');
 
-var INSTRUCTIONS = 'Follow these steps and then run this command again:\n' +
+var INSTRUCTIONS = 'No cookie found! Please follow these steps:\n' +
 '1. Open Google Chrome and right click the page and select Inspect Element.\n' +
 '2. Go to https://www.youtube.com/, log in if you don\'t have.\n' +
 '3. In Networks tab, click Documents and right click the first item in the \n' +
-'   list and click Copy as cURL.';
+'   list and click Copy as cURL.\n' +
+'4. Re-run this command and it will read the contents of your clipboard.';
 
 module.exports = {
   readCache: readCache,
@@ -90,7 +91,7 @@ function createCache(data) {
 
 function checkConf() {
   var conf = readConf();
-  if (conf) {
+  if (typeof conf === 'object' && Object.keys(conf).length > 0) {
     return Q(conf);
   } else {
     return getClipboard().then(function(content) {
@@ -108,20 +109,26 @@ function checkConf() {
 }
 
 function getClipboard() {
+  var cb = {
+    darwin: [ 'pbpaste' ],
+    linux: [ 'xclip', [ '-selection', 'clipboard', '-out' ] ]
+  }[ process.platform ];
+  if (!cb) return Q.reject('No clipboard command for your OS!');
   var deferred = Q.defer();
-  var pbpaste = spawn('pbpaste');
+  var clipboard = spawn.apply(undefined, cb);
   var data = '';
-  pbpaste.stdout.on('data', function(chunk) {
+  clipboard.stdout.on('data', function(chunk) {
     data += chunk;
   });
-  pbpaste.stdout.on('end', function() {
+  clipboard.stdout.on('end', function() {
     deferred.resolve(data);
   });
-  pbpaste.on('exit', function(code) {
-    deferred.reject('Exit with code: '+ code);
+  clipboard.on('exit', function(code) {
+    if (code) deferred.reject('Exit with code: '+ code);
   });
-  pbpaste.on('error', function(e) {
-    deferred.reject(e.message);
+  clipboard.on('error', function(e) {
+    deferred.reject('Failed to read clipboard. Make sure you have access to ' +
+      'command `' + cb[0] + '`.');
   });
   return deferred.promise;
 }

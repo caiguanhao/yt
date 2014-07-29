@@ -39,12 +39,7 @@ then(function(data) {
   makeMenu();
 }).
 catch(function(err) {
-  if (MENU) {
-    MENU.reset();
-    MENU.close();
-  }
-  console.error(err.stack ? err.stack : err);
-  process.exit(1);
+  error(err);
 });
 
 // events
@@ -73,6 +68,9 @@ ytEvents.on('start', function(index) {
       killall(RUNNING[url].pid);
     }
   });
+  livestreamer.on('error', function(e) {
+    error('Make sure you have access to command `livestreamer`.');
+  });
   livestreamer.on('exit', function() {
     ytEvents.emit('end', url);
   });
@@ -93,6 +91,15 @@ ytEvents.on('end', function(url) {
   }
   delete RUNNING[url];
 });
+
+function error(err) {
+  if (MENU) {
+    MENU.reset();
+    MENU.close();
+  }
+  console.error(err.stack ? err.stack : err);
+  process.kill();
+}
 
 // serial(2) = [1, 2]  //  serial(5) = [1, 2, 3, 4, 5]
 function serial(n) {
