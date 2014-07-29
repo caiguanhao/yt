@@ -1,25 +1,22 @@
 #!/usr/bin/env node
 
-var Q          = require('q');
-var events     = require('events');
-var https      = require('https');
-var libapi     = require('./api');
-var libdata    = require('./data');
-var entities   = require('entities');
-var termMenu   = require('terminal-menu-2');
-var exec       = require('child_process').exec;
-var spawn      = require('child_process').spawn;
+var Q        = require('q');
+var events   = require('events');
+var https    = require('https');
+var libapi   = require('./api');
+var libdata  = require('./data');
+var entities = require('entities');
+var termMenu = require('terminal-menu-2');
+var exec     = require('child_process').exec;
+var spawn    = require('child_process').spawn;
 
-var OPTIONS    = require('./getopts');
-var COLUMNS    = process.stdout.columns || 80;
-var ROWS       = process.stdout.rows || 24;
-var MENU;
+var OPTIONS  = require('./getopts');
+var COLUMNS  = process.stdout.columns || 80;
+var ROWS     = process.stdout.rows || 24;
+var colMax   = COLUMNS - 4;
+var rowMax   = ROWS - 2;
 
-var colMax = COLUMNS - 4;
-var rowMax = ROWS - 2;
-
-var RUNNING = {}, ITEMS = [];
-
+var MENU, RUNNING = {}, ITEMS = [];
 var INDICATOR_ON = ' ◉ ', INDICATOR_OFF = ' ◯ ';
 
 Q().
@@ -32,27 +29,14 @@ then(function() {
 }).
 then(function(cookie) {
   if (!MENU) process.stdout.write('Retrieving list of videos ... ');
-  var pages = Math.ceil(rowMax / libapi.itemsPerPage);
-  var requests = Array.apply(undefined, {
-    length: pages
-  }).map(Function.call, function(i) {
-    return libapi.request(i + 1, cookie);
-  });
-  return Q.all(requests);
-}).
-then(function(res) {
-  var html = '';
-  for (var i = 0; i < res.length; i++) {
-    html += res[i].body;
-  }
-  return libapi.analyze(html);
+  var pagesNeeded = Math.ceil(rowMax / libapi.subscription.itemsPerPage);
+  return libapi.subscription.get(serial(pagesNeeded), cookie);
 }).
 then(function(data) {
-  if (!arrayEquals(ITEMS, data)) {
-    libdata.createCache(data);
-    ITEMS = data;
-    makeMenu();
-  }
+  if (arrayEquals(ITEMS, data)) return;
+  libdata.createCache(data);
+  ITEMS = data;
+  makeMenu();
 }).
 catch(function(err) {
   if (MENU) {
@@ -63,7 +47,7 @@ catch(function(err) {
   process.exit(1);
 });
 
-
+// events
 
 var ytEvents = new events.EventEmitter();
 
@@ -109,6 +93,13 @@ ytEvents.on('end', function(url) {
   }
   delete RUNNING[url];
 });
+
+// serial(2) = [1, 2]  //  serial(5) = [1, 2, 3, 4, 5]
+function serial(n) {
+  return Array.apply(undefined, { length: n }).map(Function.call, function(i) {
+    return i + 1;
+  });
+}
 
 function killall(pid) {
   if (!pid) return;
