@@ -1,15 +1,16 @@
 {
   "name": "yt",
   "version": "0.1.1",
-  "description": "Open your YouTube subscription videos from terminal.",
+  "description": "Get lastest videos of your YouTube subscriptions.",
   "repository": {
     "type": "git",
     "url": "https://github.com/caiguanhao/yt.git"
   },
   "main": "api.js",
   "keywords": [
-    "YouTube",
-    "videos"
+    "youtube",
+    "videos",
+    "subscriptions"
   ],
   "bin": {
     "yt": "yt.js"

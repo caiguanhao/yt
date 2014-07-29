@@ -3,14 +3,16 @@ yt
 
 Get lastest videos of user subscriptions in a faster way. (using cookie)
 
-**Why not use YouTube's APIv3?** You have to get recent uploads of each
-subscription and sort them by date. It is very inefficient.
+**Why not use YouTube's APIv3?** The APIv3 does not provide a direct method
+to do this. You have to get recent uploads of each subscription and sort them
+by date manually. It is very inefficient.
 
 ## Command
 
 If you installed `yt` globally, you can open your YouTube subscription videos
 from terminal. Requires [livestreamer](https://github.com/chrippa/livestreamer)
-and VLC player. Currently works on Mac OS X and Linux.
+and [VLC player](http://www.videolan.org/vlc/.
+Currently works on Mac OS X and Linux.
 
 ```
 pip install livestreamer
@@ -47,6 +49,8 @@ var cookie = {
 // returns a Q promise;
 
 yt.subscription.get(1, cookie).then(function(videos) {});
+
+// or page 1 to 5:
 yt.subscription.get([1,2,3,4,5], cookie).then(function(videos) {
   console.log(videos);
 });
