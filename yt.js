@@ -173,15 +173,69 @@ function request(page) {
 }
 
 function analyze(content) {
-  var ret = [];
+  var ret = [], feedItem = -1;
+  var isDuration = 0, isUserName = 0, isMetaData = 0, isDescription = 0;
   var deferred = Q.defer();
   var parser = new htmlparser.Parser({
     onopentag: function(name, attribs) {
+      var hasClass = function(classname) {
+        return attribs.class && attribs.class.indexOf(classname) > -1;
+      };
       if (name === 'a' && attribs.title && /^\/watch/.test(attribs.href)) {
-        ret.push({
-          url: 'http://www.youtube.com' + attribs.href,
-          title: attribs.title
-        });
+        ret[feedItem].url = 'http://www.youtube.com' + attribs.href;
+        ret[feedItem].title = attribs.title;
+      } else if (hasClass('yt-channel-title-icon-verified')) {
+        ret[feedItem].verified = true;
+      } else if (hasClass('yt-badge-live')) {
+        ret[feedItem].live = true;
+      } else if (hasClass('video-time')) {
+        isDuration = 1;
+      } else if (hasClass('yt-user-name')) {
+        isUserName = 1;
+        ret[feedItem].userurl = 'http://www.youtube.com' + attribs.href;
+      } else if (name === 'div' && hasClass('yt-lockup-meta')) {
+        isMetaData = 1;
+      } else if (isMetaData > 0 && name === 'li') {
+        isMetaData++;
+      } else if (name === 'div' && hasClass('yt-lockup-description')) {
+        isDescription = 1;
+      } else if (name === 'li' && hasClass('feed-item-container')) {
+        feedItem++;
+        ret[feedItem] = {
+          duration: '',
+          live: false,
+          verified: false,
+          description: ''
+        };
+      }
+    },
+    onclosetag: function(name) {
+      if (isMetaData && name === 'div') {
+        isMetaData = 0;
+      } else if (isDescription && name === 'div') {
+        ret[feedItem].description = ret[feedItem].description.trim();
+        isDescription = 0;
+      }
+    },
+    ontext: function(text) {
+      text = text.trim();
+      if (isDuration) {
+        ret[feedItem].duration = text;
+        isDuration = 0;
+      } else if (isUserName) {
+        ret[feedItem].username = text;
+        isUserName = 0;
+      } else if (isMetaData) {
+        var key = {
+          2: 'time',
+          4: 'views'
+        }[isMetaData];
+        if (key) {
+          ret[feedItem][key] = text;
+          isMetaData++;
+        }
+      } else if (isDescription) {
+        ret[feedItem].description += entities.decodeHTML(text) + ' ';
       }
     },
     onend: function(tagname) {
@@ -220,7 +274,11 @@ function makeMenu() {
     var indicator = INDICATOR_OFF;
     if (RUNNING.hasOwnProperty(ITEMS[i].url)) indicator = INDICATOR_ON;
     var title = ITEMS[i].title;
-    MENU.add(slice(indicator + pad(i + 1) + '. ' + title, colMax + indLen));
+    var duration = ITEMS[i].duration || '';
+    if (duration && duration.length === 4) duration = '0' + duration;
+    if (duration) duration = '[' + duration + '] ';
+    var text = indicator + pad(i + 1) + '. ' + duration + title;
+    MENU.add(slice(text, colMax + indLen));
   }
   if (selected > -1) MENU.selected = selected;
   MENU.on('select', function (label, index) {
