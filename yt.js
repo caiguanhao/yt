@@ -3,22 +3,20 @@
 var Q          = require('q');
 var events     = require('events');
 var https      = require('https');
+var libapi     = require('./api');
 var libdata    = require('./data');
 var entities   = require('entities');
 var termMenu   = require('terminal-menu-2');
-var htmlparser = require('htmlparser2');
 var exec       = require('child_process').exec;
 var spawn      = require('child_process').spawn;
 
 var OPTIONS    = require('./getopts');
 var COLUMNS    = process.stdout.columns || 80;
 var ROWS       = process.stdout.rows || 24;
-var COOKIE, MENU;
+var MENU;
 
 var colMax = COLUMNS - 4;
 var rowMax = ROWS - 2;
-
-var ITEMSPERPAGE = 16;
 
 var RUNNING = {}, ITEMS = [];
 
@@ -33,15 +31,12 @@ then(function() {
   return libdata.checkConf();
 }).
 then(function(cookie) {
-  COOKIE = cookie;
-}).
-then(function() {
   if (!MENU) process.stdout.write('Retrieving list of videos ... ');
-  var pages = Math.ceil(rowMax / ITEMSPERPAGE);
+  var pages = Math.ceil(rowMax / libapi.itemsPerPage);
   var requests = Array.apply(undefined, {
     length: pages
   }).map(Function.call, function(i) {
-    return request(i + 1);
+    return libapi.request(i + 1, cookie);
   });
   return Q.all(requests);
 }).
@@ -50,7 +45,7 @@ then(function(res) {
   for (var i = 0; i < res.length; i++) {
     html += res[i].body;
   }
-  return analyze(html);
+  return libapi.analyze(html);
 }).
 then(function(data) {
   if (!arrayEquals(ITEMS, data)) {
@@ -130,121 +125,6 @@ function killall(pid) {
 
 function arrayEquals(a, b) {
   return JSON.stringify(a) === JSON.stringify(b);
-}
-
-function request(page) {
-  var deferred = Q.defer();
-  var reqpath;
-  if (page < 2) {
-    reqpath = '/feed/subscriptions';
-  } else {
-    reqpath = '/feed_ajax?feed_name=subscriptions&action_load_system_feed=1';
-    reqpath += '&paging=' + ((page - 1) * ITEMSPERPAGE);
-  }
-  var req = https.request({
-    host: 'www.youtube.com',
-    port: 443,
-    path: reqpath,
-    method: 'GET',
-    headers: {
-      cookie: COOKIE
-    }
-  }, function(res) {
-    res.setEncoding('utf8');
-    var body = '';
-    res.on('data', function(chunk) {
-      body += chunk;
-    });
-    res.on('end', function() {
-      if (page >= 2) {
-        body = JSON.parse(body).content_html;
-      }
-      deferred.resolve({
-        headers: res.headers,
-        body: body
-      });
-    });
-  });
-  req.on('error', function (err) {
-    deferred.reject(err);
-  });
-  req.end();
-  return deferred.promise;
-}
-
-function analyze(content) {
-  var ret = [], feedItem = -1;
-  var isDuration = 0, isUserName = 0, isMetaData = 0, isDescription = 0;
-  var deferred = Q.defer();
-  var parser = new htmlparser.Parser({
-    onopentag: function(name, attribs) {
-      var hasClass = function(classname) {
-        return attribs.class && attribs.class.indexOf(classname) > -1;
-      };
-      if (name === 'a' && attribs.title && /^\/watch/.test(attribs.href)) {
-        ret[feedItem].url = 'http://www.youtube.com' + attribs.href;
-        ret[feedItem].title = attribs.title;
-      } else if (hasClass('yt-channel-title-icon-verified')) {
-        ret[feedItem].verified = true;
-      } else if (hasClass('yt-badge-live')) {
-        ret[feedItem].live = true;
-      } else if (hasClass('video-time')) {
-        isDuration = 1;
-      } else if (hasClass('yt-user-name')) {
-        isUserName = 1;
-        ret[feedItem].userurl = 'http://www.youtube.com' + attribs.href;
-      } else if (name === 'div' && hasClass('yt-lockup-meta')) {
-        isMetaData = 1;
-      } else if (isMetaData > 0 && name === 'li') {
-        isMetaData++;
-      } else if (name === 'div' && hasClass('yt-lockup-description')) {
-        isDescription = 1;
-      } else if (name === 'li' && hasClass('feed-item-container')) {
-        feedItem++;
-        ret[feedItem] = {
-          duration: '',
-          live: false,
-          verified: false,
-          description: ''
-        };
-      }
-    },
-    onclosetag: function(name) {
-      if (isMetaData && name === 'div') {
-        isMetaData = 0;
-      } else if (isDescription && name === 'div') {
-        ret[feedItem].description = ret[feedItem].description.trim();
-        isDescription = 0;
-      }
-    },
-    ontext: function(text) {
-      text = text.trim();
-      if (isDuration) {
-        ret[feedItem].duration = text;
-        isDuration = 0;
-      } else if (isUserName) {
-        ret[feedItem].username = text;
-        isUserName = 0;
-      } else if (isMetaData) {
-        var key = {
-          2: 'time',
-          4: 'views'
-        }[isMetaData];
-        if (key) {
-          ret[feedItem][key] = text;
-          isMetaData++;
-        }
-      } else if (isDescription) {
-        ret[feedItem].description += entities.decodeHTML(text) + ' ';
-      }
-    },
-    onend: function(tagname) {
-      deferred.resolve(ret);
-    }
-  });
-  parser.write(content);
-  parser.end();
-  return deferred.promise;
 }
 
 function slice(str, len) {

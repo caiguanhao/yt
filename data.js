@@ -47,10 +47,14 @@ function readConf() {
     if (!isStr(sid) || !isStr(hsid) || !isStr(ssid) || !isStr(login_info)) {
       throw undefined;
     }
-    return 'SID=' + sid + '; HSID=' + hsid + '; SSID=' + ssid +
-      '; LOGIN_INFO=' + login_info;
+    return {
+      SID: sid,
+      HSID: hsid,
+      SSID: ssid,
+      LOGIN_INFO: login_info
+    };
   } catch(e) {
-    return undefined;
+    return {};
   }
 }
 
