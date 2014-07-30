@@ -109,7 +109,7 @@ function analyze(content) {
       };
       if (name === 'a' && attribs.title && /^\/watch/.test(attribs.href)) {
         ret[feedItem].url = 'http://www.youtube.com' + attribs.href;
-        ret[feedItem].title = attribs.title;
+        ret[feedItem].title = entities.decodeHTML(attribs.title);
       } else if (hasClass('yt-channel-title-icon-verified')) {
         ret[feedItem].verified = true;
       } else if (hasClass('yt-badge-live')) {

@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 
 var Q        = require('q');
+var open     = require('open');
 var events   = require('events');
 var https    = require('https');
 var libapi   = require('./api');
 var libdata  = require('./data');
-var entities = require('entities');
 var termMenu = require('terminal-menu-2');
 var exec     = require('child_process').exec;
 var spawn    = require('child_process').spawn;
@@ -39,7 +39,9 @@ then(function(data) {
   libdata.saveCache(hash, 'hash');
   ITEMS = data;
   if (HASH !== hash) {     // if there are new videos, update menu
-    makeMenu();
+    if (!MENU.detailsPage) { // update menu if we are not on details page
+      makeMenu();
+    }
   }
 }).
 catch(function(err) {
@@ -52,11 +54,19 @@ var ytEvents = new events.EventEmitter();
 
 ytEvents.on('start', function(index) {
   var url = ITEMS[index].url;
-  if (MENU.items[index].label.slice(0, 3) === INDICATOR_ON) {
-    return killall(RUNNING[url].pid);
+  if (MENU.detailsPage) {
+    if (MENU.items[0].label === 'Stop this video') {
+      return killall(RUNNING[url].pid);
+    }
+    MENU.items[0].label = 'Stop this video';
+    MENU._drawRow(0);
+  } else {
+    if (MENU.items[index].label.slice(0, 3) === INDICATOR_ON) {
+      return killall(RUNNING[url].pid);
+    }
+    MENU.items[index].label = INDICATOR_ON + MENU.items[index].label.slice(3);
+    MENU._drawRow(index);
   }
-  MENU.items[index].label = INDICATOR_ON + MENU.items[index].label.slice(3);
-  MENU._drawRow(index);
   // use --player-no-close to prevent video player exiting too early
   // vlc's --play-and-exit option does not work in Mac OS X
   // so we use verbose stderr to see when the video really ends
@@ -90,8 +100,13 @@ ytEvents.on('end', function(url) {
     }
   }
   if (index > -1) {
-    MENU.items[index].label = INDICATOR_OFF + MENU.items[index].label.slice(3);
-    MENU._drawRow(index);
+    if (MENU.detailsPage) {
+      MENU.items[0].label = 'Play this video';
+      MENU._drawRow(0);
+    } else {
+      MENU.items[index].label = INDICATOR_OFF + MENU.items[index].label.slice(3);
+      MENU._drawRow(index);
+    }
   }
   delete RUNNING[url];
 });
@@ -151,7 +166,6 @@ function split(str, len) {
 }
 
 function slice(str, len) {
-  str = entities.decodeHTML(str);
   return str.slice(0, len - (str.match(/[^\u0000-\u00ff]/g) || '').length);
 }
 
@@ -214,20 +228,49 @@ function makeDetailsPage() {
     MENU.write(line + '\n');
   });
   MENU.write('\n');
-  MENU.add('URL:   ' + ITEM.url);
+  split('URL: ' + ITEM.url, colMax - 2).forEach(function(line) {
+    MENU.write(line + '\n');
+  });
+  MENU.write('\n');
+  if (RUNNING.hasOwnProperty(ITEM.url)) {
+    MENU.add('Stop this video');
+  } else {
+    MENU.add('Play this video');
+  }
+  MENU.add('Open this video in web browser');
   MENU.write('\n');
   MENU.write(ITEM.time + ' - ' + ITEM.views + '\n');
+  var url = ITEM.url;
+  MENU.on('select', function (label, index) {
+    if (index === 0) {
+      var i = 0
+      for (; i < ITEMS.length; i++) {
+        if (ITEMS[i].url === url) {
+          break;
+        }
+      }
+      ytEvents.emit('start', i);
+    } else if (index === 1) {
+      open(url);
+    }
+  });
   MENU.createStream().pipe(process.stdout);
+
 }
 
 process.stdin.on('data', function(buf) {
   if (!MENU) return;
   var codes = [].join.call(buf, '.');
+  var selected;
   if (MENU.detailsPage && codes === '27.91.68') {             // left
+    selected = MENU._selected;
     MENU.reset();
     MENU.close();
     makeMenu();
+    if (selected > -1) MENU.selected = selected;
   } else if (!MENU.detailsPage && codes === '27.91.67') {      // right
+    selected = MENU.selected;
     makeDetailsPage();
+    MENU._selected = selected;
   }
 });

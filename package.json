@@ -22,9 +22,10 @@
   },
   "homepage": "https://github.com/caiguanhao/yt",
   "dependencies": {
-    "q": "^1.0.1",
-    "htmlparser2": "^3.7.3",
     "entities": "^1.1.1",
+    "htmlparser2": "^3.7.3",
+    "open": "0.0.5",
+    "q": "^1.0.1",
     "terminal-menu-2": "0.0.0"
   }
 }
