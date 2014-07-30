@@ -21,11 +21,11 @@ var INDICATOR_ON = ' ◉ ', INDICATOR_OFF = ' ◯ ';
 
 Q().
 then(function() {
-  ITEMS = libdata.readCache();
+  ITEMS = libdata.readCache('subscriptions');
   makeMenu();
 }).
 then(function() {
-  return libdata.checkConf();
+  return libdata.checkCookie();
 }).
 then(function(cookie) {
   if (!MENU) process.stdout.write('Retrieving list of videos ... ');
@@ -34,7 +34,7 @@ then(function(cookie) {
 }).
 then(function(data) {
   if (arrayEquals(ITEMS, data)) return;
-  libdata.createCache(data);
+  libdata.saveCache(data, 'subscriptions');
   ITEMS = data;
   makeMenu();
 }).

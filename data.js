@@ -15,9 +15,9 @@ var INSTRUCTIONS = 'No cookie found! Please follow these steps:\n' +
 '4. Re-run this command and it will read the contents of your clipboard.';
 
 module.exports = {
+  checkCookie: checkCookie,
   readCache: readCache,
-  checkConf: checkConf,
-  createCache: createCache
+  saveCache: saveCache
 };
 
 function getUserHome() {
@@ -37,8 +37,11 @@ function mkdirp(dirpath) {
 function isStr(what) {
   return what && (typeof what === 'string');
 }
+function isObj(what) {
+  return Object.prototype.toString.call(what) === '[object Object]';
+}
 
-function readConf() {
+function readCookie() {
   try {
     var cookie = JSON.parse(fs.readFileSync(CookieFile).toString());
     var sid = cookie.SID;
@@ -59,20 +62,35 @@ function readConf() {
   }
 }
 
-function readCache() {
+function readCache(key) {
   try {
-    return JSON.parse(fs.readFileSync(CacheFile).toString());
+    var cache = JSON.parse(fs.readFileSync(CacheFile).toString());
+    if (!isObj(cache)) throw undefined;
+    if (key) return cache[key];
+    return cache;
   } catch(e) {
     return undefined;
   }
 }
 
-function createFile(filepath, data) {
+function saveFile(filepath, _data, key) {
   if (!fs.existsSync(YTDir)) {
     mkdirp(YTDir);
   } else if (!fs.statSync(YTDir).isDirectory()) {
     fs.unlinkSync(YTDir);
     mkdirp(YTDir);
+  }
+  var data;
+  if (key) {
+    data = {};
+    try {
+      var d = JSON.parse(fs.readFileSync(filepath).toString());
+      if (!isObj(d)) throw undefined;
+      data = d;
+    } catch(e) {}
+    data[key] = _data;
+  } else {
+    data = _data;
   }
   fs.writeFileSync(
     filepath,
@@ -81,29 +99,29 @@ function createFile(filepath, data) {
   );
 }
 
-function createConf(data) {
-  createFile(CookieFile, data);
+function saveCookie(data) {
+  saveFile(CookieFile, data);
 }
 
-function createCache(data) {
-  createFile(CacheFile, data);
+function saveCache(data, key) {
+  saveFile(CacheFile, data, key);
 }
 
-function checkConf() {
-  var conf = readConf();
-  if (typeof conf === 'object' && Object.keys(conf).length > 0) {
-    return Q(conf);
+function checkCookie() {
+  var cookie = readCookie();
+  if (typeof cookie === 'object' && Object.keys(cookie).length > 0) {
+    return Q(cookie);
   } else {
     return getClipboard().then(function(content) {
       var data = content.match(/\b(SID|HSID|SSID|LOGIN_INFO)=(.+?);/g);
       if (!data || data.length !== 4) throw INSTRUCTIONS;
-      var conf = {};
+      var cookie = {};
       for (var i = 0; i < data.length; i++) {
         var d = data[i].split('=', 2);
-        conf[d[0]] = d[1].slice(0, -1);
+        cookie[d[0]] = d[1].slice(0, -1);
       }
-      createConf(conf);
-      return checkConf();
+      saveCookie(cookie);
+      return checkCookie();
     });
   }
 }

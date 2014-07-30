@@ -40,12 +40,12 @@ function parseCookie(content) {
   if (typeof content !== 'string') return content;
   var data = content.match(/\b(SID|HSID|SSID|LOGIN_INFO)=(.+?);/g);
   if (!data || data.length !== 4) return {};
-  var conf = {};
+  var cookie = {};
   for (var i = 0; i < data.length; i++) {
     var d = data[i].split('=', 2);
-    conf[d[0]] = d[1].slice(0, -1);
+    cookie[d[0]] = d[1].slice(0, -1);
   }
-  return conf;
+  return cookie;
 }
 
 function cookieString(cookies) {
