@@ -18,6 +18,7 @@ var rowMax   = ROWS - 2;
 
 var MENU, RUNNING = {}, ITEMS = [], HASH;
 var INDICATOR_ON = ' ◉ ', INDICATOR_OFF = ' ◯ ';
+var VIDEO_TO_START = 'Play this video', VIDEO_TO_STOP = 'Stop this video';
 
 Q().
 then(function() {
@@ -55,10 +56,10 @@ var ytEvents = new events.EventEmitter();
 ytEvents.on('start', function(index) {
   var url = ITEMS[index].url;
   if (MENU.detailsPage) {
-    if (MENU.items[0].label === 'Stop this video') {
+    if (MENU.items[0].label === VIDEO_TO_STOP) {
       return killall(RUNNING[url].pid);
     }
-    MENU.items[0].label = 'Stop this video';
+    MENU.items[0].label = VIDEO_TO_STOP;
     MENU._drawRow(0);
   } else {
     if (MENU.items[index].label.slice(0, 3) === INDICATOR_ON) {
@@ -101,7 +102,7 @@ ytEvents.on('end', function(url) {
   }
   if (index > -1) {
     if (MENU.detailsPage) {
-      MENU.items[0].label = 'Play this video';
+      MENU.items[0].label = VIDEO_TO_START;
       MENU._drawRow(0);
     } else {
       MENU.items[index].label = INDICATOR_OFF + MENU.items[index].label.slice(3);
@@ -233,9 +234,9 @@ function makeDetailsPage() {
   });
   MENU.write('\n');
   if (RUNNING.hasOwnProperty(ITEM.url)) {
-    MENU.add('Stop this video');
+    MENU.add(VIDEO_TO_STOP);
   } else {
-    MENU.add('Play this video');
+    MENU.add(VIDEO_TO_START);
   }
   MENU.add('Open this video in web browser');
   MENU.write('\n');
@@ -255,7 +256,6 @@ function makeDetailsPage() {
     }
   });
   MENU.createStream().pipe(process.stdout);
-
 }
 
 process.stdin.on('data', function(buf) {
