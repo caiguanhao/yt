@@ -40,7 +40,7 @@ then(function(data) {
   libdata.saveCache(hash, 'hash');
   ITEMS = data;
   if (HASH !== hash) {     // if there are new videos, update menu
-    if (!MENU.detailsPage) { // update menu if we are not on details page
+    if (!MENU || !MENU.detailsPage) { // update menu if we are not on details page
       makeMenu();
     }
   }
