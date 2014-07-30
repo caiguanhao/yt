@@ -211,28 +211,41 @@ function makeDetailsPage() {
     MENU.reset();
     MENU.close();
   }
+  var blankLines = rowMax;
   var ITEM = ITEMS[selected];
   MENU = termMenu({ width: colMax, fg: OPTIONS.fg, bg: OPTIONS.bg });
   MENU.detailsPage = true;
   MENU.reset();
+
   MENU.write('Title:\n');
-  split(ITEM.title, colMax - 2).forEach(function(line) {
+  var title = split(ITEM.title, colMax - 2);
+  title.forEach(function(line) {
     MENU.write(line + '\n');
   });
   MENU.write('\n');
+  blankLines -= title.length + 2;
+
   var username = ITEM.username;
   if (ITEM.verified) username += ' (verified)'
   MENU.write('By: ' + username + '\n');
   MENU.write('\n');
+  blankLines -= 2;
+
   MENU.write('Description:\n');
-  split(ITEM.description, colMax - 2).forEach(function(line) {
+  var description = split(ITEM.description || '(none)', colMax - 2);
+  description.forEach(function(line) {
     MENU.write(line + '\n');
   });
   MENU.write('\n');
-  split('URL: ' + ITEM.url, colMax - 2).forEach(function(line) {
+  blankLines -= description.length + 2;
+
+  var itemurl = split('URL: ' + ITEM.url, colMax - 2);
+  itemurl.forEach(function(line) {
     MENU.write(line + '\n');
   });
   MENU.write('\n');
+  blankLines -= itemurl.length + 1;
+
   if (RUNNING.hasOwnProperty(ITEM.url)) {
     MENU.add(VIDEO_TO_STOP);
   } else {
@@ -240,7 +253,16 @@ function makeDetailsPage() {
   }
   MENU.add('Open this video in web browser');
   MENU.write('\n');
-  MENU.write(ITEM.time + ' - ' + ITEM.views + '\n');
+  blankLines -= 3;
+
+  blankLines -= 1;  // last line
+
+  for (var i = 0; i < blankLines; i++) {
+    MENU.write('\n');
+  }
+
+  MENU.write(ITEM.time + ' - ' + (ITEM.views || 'no views') + '\n');
+
   var url = ITEM.url;
   MENU.on('select', function (label, index) {
     if (index === 0) {
