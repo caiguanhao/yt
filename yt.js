@@ -16,12 +16,13 @@ var ROWS     = process.stdout.rows || 24;
 var colMax   = COLUMNS - 4;
 var rowMax   = ROWS - 2;
 
-var MENU, RUNNING = {}, ITEMS = [];
+var MENU, RUNNING = {}, ITEMS = [], HASH;
 var INDICATOR_ON = ' ◉ ', INDICATOR_OFF = ' ◯ ';
 
 Q().
 then(function() {
   ITEMS = libdata.readCache('subscriptions');
+  HASH = libdata.readCache('hash');
   makeMenu();
 }).
 then(function() {
@@ -33,10 +34,13 @@ then(function(cookie) {
   return libapi.subscription.get(serial(pagesNeeded), cookie);
 }).
 then(function(data) {
-  if (arrayEquals(ITEMS, data)) return;
+  var hash = cacheHash(data);
   libdata.saveCache(data, 'subscriptions');
+  libdata.saveCache(hash, 'hash');
   ITEMS = data;
-  makeMenu();
+  if (HASH !== hash) {     // if there are new videos, update menu
+    makeMenu();
+  }
 }).
 catch(function(err) {
   error(err);
@@ -121,8 +125,13 @@ function killall(pid) {
   });
 }
 
-function arrayEquals(a, b) {
-  return JSON.stringify(a) === JSON.stringify(b);
+function cacheHash(items) {
+  var text = items.map(function(item) {
+    return item.url;
+  }).join('\n');
+  var shasum = require('crypto').createHash('sha1');
+  shasum.update(text);
+  return shasum.digest('hex');
 }
 
 // split('一a二b三c四五六七', 3) = ["一a", "二b", "三c", "四", "五", "六", "七"]
