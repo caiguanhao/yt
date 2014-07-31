@@ -27,9 +27,10 @@ Run `yt -h` for available command-line options.
 ### Usage
 
 * :leftwards_arrow_with_hook: Play / Stop video
-* :arrow_right: Show details
-* :arrow_left: Back to list
-* :arrow_up::arrow_down: Scroll up / down
+* :arrow_forward: Show details
+* :arrow_backward: Back to list
+* :arrow_up_small::arrow_down_small: Scroll up / down
+* :arrow_double_up::arrow_double_down: Page up / down
 
 ## API
 

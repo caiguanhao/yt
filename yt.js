@@ -31,7 +31,7 @@ then(function() {
 }).
 then(function(cookie) {
   if (!MENU) process.stdout.write('Retrieving list of videos ... ');
-  var pagesNeeded = Math.ceil(rowMax / libapi.subscription.itemsPerPage) + 1;
+  var pagesNeeded = 10;
   return libapi.subscription.get(serial(pagesNeeded), cookie);
 }).
 then(function(data) {
@@ -296,38 +296,58 @@ function makeDetailsPage() {
 process.stdin.on('data', function(buf) {
   if (!MENU) return;
   var codes = [].join.call(buf, '.');
-  var left = codes === '27.91.68', right = codes === '27.91.67';
-  var down = codes === '27.91.66', up = codes === '27.91.65';
   var selected;
+
   if (MENU.detailsPage) {
-    if (left) {
+    if (codes === '27.91.68') {  // left
       selected = MENU._selected;
       MENU.reset();
       MENU.close();
       makeMenu();
       if (selected > -1) MENU.selected = selected;
     }
-  } else {
-    if (right) {
-      selected = MENU.selected;
-      makeDetailsPage();
-      MENU._selected = selected;
-    } else if (down) {
-      if (MENU.selected === rowMax - 1) {
-        if (ITEMS[rowMax + OFFSET]) {
-          OFFSET++;
-          updateMenuItems();
-        }
-        MENU.selected = rowMax - 2;
+    return;
+  }
+
+  switch (codes) {
+  case '27.91.67':         // right
+    selected = MENU.selected;
+    makeDetailsPage();
+    MENU._selected = selected;
+    break;
+  case '27.91.66':         // down
+    if (MENU.selected === rowMax - 1) {
+      if (ITEMS[rowMax + OFFSET]) {
+        OFFSET++;
+        updateMenuItems();
       }
-    } else if (up) {
-      if (MENU.selected === 0) {
-        MENU.selected = 1;
-        if (ITEMS[OFFSET - 1]) {
-          OFFSET--;
-          updateMenuItems();
-        }
+      MENU.selected = rowMax - 2;
+    }
+    break;
+  case '27.91.65':         // up
+    if (MENU.selected === 0) {
+      MENU.selected = 1;
+      if (ITEMS[OFFSET - 1]) {
+        OFFSET--;
+        updateMenuItems();
       }
     }
+    break;
+  case '27.91.54.126':     // pagedown
+    OFFSET += rowMax;
+    if (OFFSET + rowMax > ITEMS.length) {
+      OFFSET = ITEMS.length - rowMax;
+      MENU.selected = rowMax - 1;
+    }
+    updateMenuItems();
+    break;
+  case '27.91.53.126':     // pageup
+    OFFSET -= rowMax;
+    if (OFFSET < 0) {
+      OFFSET = 0;
+      MENU.selected = 0;
+    }
+    updateMenuItems();
+    break;
   }
 });
