@@ -24,6 +24,13 @@ By default, `yt` will store your cookie and cache file in `~/.config/yt/`.
 
 Run `yt -h` for available command-line options.
 
+### Usage
+
+* `Enter` Play/Stop video
+* `►` Show details
+* `◀︎` Back to list
+* `▲/▼` Scroll up / down
+
 ## API
 
 ```js

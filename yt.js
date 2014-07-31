@@ -16,7 +16,7 @@ var ROWS     = process.stdout.rows || 24;
 var colMax   = COLUMNS - 4;
 var rowMax   = ROWS - 2;
 
-var MENU, RUNNING = {}, ITEMS = [], HASH;
+var MENU, OFFSET = 0, RUNNING = {}, ITEMS = [], HASH;
 var INDICATOR_ON = ' ◉ ', INDICATOR_OFF = ' ◯ ';
 var VIDEO_TO_START = 'Play this video', VIDEO_TO_STOP = 'Stop this video';
 
@@ -31,7 +31,7 @@ then(function() {
 }).
 then(function(cookie) {
   if (!MENU) process.stdout.write('Retrieving list of videos ... ');
-  var pagesNeeded = Math.ceil(rowMax / libapi.subscription.itemsPerPage);
+  var pagesNeeded = Math.ceil(rowMax / libapi.subscription.itemsPerPage) + 1;
   return libapi.subscription.get(serial(pagesNeeded), cookie);
 }).
 then(function(data) {
@@ -54,7 +54,7 @@ catch(function(err) {
 var ytEvents = new events.EventEmitter();
 
 ytEvents.on('start', function(index) {
-  var url = ITEMS[index].url;
+  var url = ITEMS[index + OFFSET].url;
   if (MENU.detailsPage) {
     if (MENU.items[0].label === VIDEO_TO_STOP) {
       return killall(RUNNING[url].pid);
@@ -95,7 +95,7 @@ ytEvents.on('start', function(index) {
 ytEvents.on('end', function(url) {
   var index = -1;
   for (var i = 0; i < ITEMS.length; i++) {
-    if (ITEMS[i].url === url) {
+    if (ITEMS[i + OFFSET].url === url) {
       index = i;
       break;
     }
@@ -187,22 +187,35 @@ function makeMenu() {
   MENU = termMenu({ width: colMax, fg: OPTIONS.fg, bg: OPTIONS.bg });
   MENU.reset();
   MENU.write('');
-  var indLen = 1; // indicator length is 2 in `slice`, so distract 1
   for (var i = 0; i < Math.min(rowMax, ITEMS.length); i++) {
-    var indicator = INDICATOR_OFF;
-    if (RUNNING.hasOwnProperty(ITEMS[i].url)) indicator = INDICATOR_ON;
-    var title = ITEMS[i].title;
-    var duration = ITEMS[i].duration || '';
-    if (duration && duration.length === 4) duration = '0' + duration;
-    if (duration) duration = '[' + duration + '] ';
-    var text = indicator + pad(i + 1) + '. ' + duration + title;
-    MENU.add(slice(text, colMax + indLen));
+    MENU.add(makeMenuItem(ITEMS, i + OFFSET));
   }
   if (selected > -1) MENU.selected = selected;
   MENU.on('select', function (label, index) {
     ytEvents.emit('start', index);
   });
   MENU.createStream().pipe(process.stdout);
+}
+
+function updateMenuItems() {
+  for (var i = 0; i < Math.min(rowMax, ITEMS.length); i++) {
+    MENU.items[i].label = makeMenuItem(ITEMS, i + OFFSET);
+    MENU._drawRow(i);
+  }
+}
+
+function makeMenuItem(items, index) {
+  var item = items[index];
+  var indLen = 1; // indicator length is 2 in `slice`, so distract 1
+  var indicator = INDICATOR_OFF;
+  if (RUNNING.hasOwnProperty(item.url)) indicator = INDICATOR_ON;
+  var title = item.title;
+  var duration = item.duration || '';
+  if (duration && duration.length === 4) duration = '0' + duration;
+  if (duration) duration = '[' + duration + '] ';
+  var padding = Array(colMax).join(' ');
+  var text = indicator + pad(index + 1) + '. ' + duration + title + padding;
+  return slice(text, colMax + indLen);
 }
 
 function makeDetailsPage() {
@@ -212,7 +225,7 @@ function makeDetailsPage() {
     MENU.close();
   }
   var blankLines = rowMax;
-  var ITEM = ITEMS[selected];
+  var ITEM = ITEMS[selected + OFFSET];
   MENU = termMenu({ width: colMax, fg: OPTIONS.fg, bg: OPTIONS.bg });
   MENU.detailsPage = true;
   MENU.reset();
@@ -272,7 +285,7 @@ function makeDetailsPage() {
           break;
         }
       }
-      ytEvents.emit('start', i);
+      ytEvents.emit('start', i - OFFSET);
     } else if (index === 1) {
       open(url);
     }
@@ -283,16 +296,38 @@ function makeDetailsPage() {
 process.stdin.on('data', function(buf) {
   if (!MENU) return;
   var codes = [].join.call(buf, '.');
+  var left = codes === '27.91.68', right = codes === '27.91.67';
+  var down = codes === '27.91.66', up = codes === '27.91.65';
   var selected;
-  if (MENU.detailsPage && codes === '27.91.68') {             // left
-    selected = MENU._selected;
-    MENU.reset();
-    MENU.close();
-    makeMenu();
-    if (selected > -1) MENU.selected = selected;
-  } else if (!MENU.detailsPage && codes === '27.91.67') {      // right
-    selected = MENU.selected;
-    makeDetailsPage();
-    MENU._selected = selected;
+  if (MENU.detailsPage) {
+    if (left) {
+      selected = MENU._selected;
+      MENU.reset();
+      MENU.close();
+      makeMenu();
+      if (selected > -1) MENU.selected = selected;
+    }
+  } else {
+    if (right) {
+      selected = MENU.selected;
+      makeDetailsPage();
+      MENU._selected = selected;
+    } else if (down) {
+      if (MENU.selected === rowMax - 1) {
+        if (ITEMS[rowMax + OFFSET]) {
+          OFFSET++;
+          updateMenuItems();
+        }
+        MENU.selected = rowMax - 2;
+      }
+    } else if (up) {
+      if (MENU.selected === 0) {
+        MENU.selected = 1;
+        if (ITEMS[OFFSET - 1]) {
+          OFFSET--;
+          updateMenuItems();
+        }
+      }
+    }
   }
 });
