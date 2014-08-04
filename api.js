@@ -1,4 +1,5 @@
 var Q          = require('q');
+var url        = require('url');
 var https      = require('https');
 var entities   = require('entities');
 var htmlparser = require('htmlparser2');
@@ -13,6 +14,11 @@ module.exports = {
     itemsPerPage: itemsPerPage
   }
 };
+
+function getId(urlstring) {
+  var urlobj = url.parse(urlstring, true);
+  return urlobj.query ? urlobj.query.v : undefined;
+}
 
 function get(pages, _cookie) {
   var promise, cookie = parseCookie(_cookie);
@@ -107,8 +113,18 @@ function analyze(content) {
       var hasClass = function(classname) {
         return attribs.class && attribs.class.indexOf(classname) > -1;
       };
-      if (name === 'a' && attribs.title && /^\/watch/.test(attribs.href)) {
-        ret[feedItem].url = 'http://www.youtube.com' + attribs.href;
+      var id;
+      if (name === 'a' && attribs.title && (id = getId(attribs.href))) {
+        ret[feedItem].id = id;
+        ret[feedItem].url = 'https://www.youtube.com/watch?v=' + id;
+        var vidurl = 'https://i.ytimg.com/vi/' + id;
+        ret[feedItem].thumbnails = {
+          default: vidurl + '/default.jpg',
+          hqdefault: vidurl + '/hqdefault.jpg',
+          mqdefault: vidurl + '/mqdefault.jpg',
+          sddefault: vidurl + '/sddefault.jpg',
+          maxresdefault: vidurl + '/maxresdefault.jpg'
+        };
         ret[feedItem].title = entities.decodeHTML(attribs.title);
       } else if (hasClass('yt-channel-title-icon-verified')) {
         ret[feedItem].verified = true;
@@ -118,7 +134,7 @@ function analyze(content) {
         isDuration = 1;
       } else if (hasClass('yt-user-name')) {
         isUserName = 1;
-        ret[feedItem].userurl = 'http://www.youtube.com' + attribs.href;
+        ret[feedItem].userurl = 'https://www.youtube.com' + attribs.href;
       } else if (name === 'div' && hasClass('yt-lockup-meta')) {
         isMetaData = 1;
       } else if (isMetaData > 0 && name === 'li') {

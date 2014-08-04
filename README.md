@@ -30,7 +30,7 @@ Run `yt -h` for available command-line options.
 * :arrow_forward: Show details
 * :arrow_backward: Back to list
 * :arrow_up_small::arrow_down_small: Scroll up / down
-* :arrow_double_up::arrow_double_down: Page up / down
+* :arrow_double_up::arrow_double_down: Shift + Page up / down
 
 ## API
 
@@ -73,7 +73,15 @@ Example output:
     description: 'This is the way salad is supposed to evolve...',
     userurl: 'http://www.youtube.com/user/EpicMealTime',
     username: 'Epic Meal Time',
-    url: 'http://www.youtube.com/watch?v=wfIAjuxbfr4',
+    id: 'wfIAjuxbfr4',
+    url: 'https://www.youtube.com/watch?v=wfIAjuxbfr4',
+    thumbnails: {
+      default: 'https://i.ytimg.com/vi/wfIAjuxbfr4/default.jpg',
+      hqdefault: 'https://i.ytimg.com/vi/wfIAjuxbfr4/hqdefault.jpg',
+      mqdefault: 'https://i.ytimg.com/vi/wfIAjuxbfr4/mqdefault.jpg',
+      sddefault: 'https://i.ytimg.com/vi/wfIAjuxbfr4/sddefault.jpg',
+      maxresdefault: 'https://i.ytimg.com/vi/wfIAjuxbfr4/maxresdefault.jpg'
+    },
     title: 'Poultry Salad - Epic Meal Time',
     time: '3 hours ago',
     views: '15,804 views' },

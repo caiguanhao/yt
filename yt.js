@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 var Q        = require('q');
+var fs       = require('fs');
 var open     = require('open');
 var events   = require('events');
 var https    = require('https');
@@ -265,8 +266,9 @@ function makeDetailsPage() {
     MENU.add(VIDEO_TO_START);
   }
   MENU.add('Open this video in web browser');
+  MENU.add('View the thumbnail of this video');
   MENU.write('\n');
-  blankLines -= 3;
+  blankLines -= 4;
 
   blankLines -= 1;  // last line
 
@@ -276,7 +278,7 @@ function makeDetailsPage() {
 
   MENU.write(ITEM.time + ' - ' + (ITEM.views || 'no views') + '\n');
 
-  var url = ITEM.url;
+  var url = ITEM.url, id = ITEM.id, thumburl = ITEM.thumbnails.maxresdefault;
   MENU.on('select', function (label, index) {
     if (index === 0) {
       var i = 0
@@ -288,6 +290,22 @@ function makeDetailsPage() {
       ytEvents.emit('start', i - OFFSET);
     } else if (index === 1) {
       open(url);
+    } else if (index === 2) {
+      MENU.items[2].label = 'Downloading thumbnail...';
+      MENU._drawRow(2);
+      var localfile = '/tmp/' + id + '.jpg';
+      var promise;
+      if (fs.existsSync(localfile)) {
+        promise = Q(localfile);
+      } else {
+        promise = download(thumburl, localfile);
+      }
+      promise.then(function(localfile) {
+        open(localfile);
+      }).finally(function() {
+        MENU.items[2].label = 'View the thumbnail of this video';
+        MENU._drawRow(2);
+      });
     }
   });
   MENU.createStream().pipe(process.stdout);
@@ -351,3 +369,18 @@ process.stdin.on('data', function(buf) {
     break;
   }
 });
+
+function download(url, to) {
+  var deferred = Q.defer();
+  var req = https.get(url, function(res) {
+    res.pipe(fs.createWriteStream(to));
+    res.on('end', function() {
+      deferred.resolve(to);
+    });
+  });
+  req.on('error', function (err) {
+    deferred.reject(err);
+  });
+  req.end();
+  return deferred.promise;
+}
