@@ -330,8 +330,8 @@ process.stdin.on('data', function(buf) {
   var selected;
 
   if (MENU.detailsPage) {
-    // left / backspace / escape
-    if ([ '27.91.68', '127', '27' ].indexOf(codes) > -1) {
+    // left / backspace / backspace (win) / escape
+    if ([ '27.91.68', '127', '8', '27' ].indexOf(codes) > -1) {
       selected = MENU._selected;
       MENU.reset();
       MENU.close();
@@ -368,11 +368,13 @@ process.stdin.on('data', function(buf) {
     }
     break;
   case '27.91.72':         // home
+  case '27.91.49.126':     // home (win)
     OFFSET = 0;
     MENU.selected = 0;
     updateMenuItems();
     break;
   case '27.91.70':         // end
+  case '27.91.52.126':     // end (win)
     OFFSET = ITEMS.length - rowMax;
     MENU.selected = rowMax - 1;
     updateMenuItems();
