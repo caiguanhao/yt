@@ -135,6 +135,9 @@ function serial(n) {
 
 function killall(pid) {
   if (!pid) return;
+  if (process.platform === 'win32') {
+    return exec('taskkill /pid ' + pid + ' /T /F');
+  }
   exec('pgrep -P ' + pid, function(error, stdout, stderr) {
     if (stdout) {
       var pids = stdout.trim().split('\n');
