@@ -15,13 +15,17 @@ for (var i = args.length - 1; i > -1; i--) {
     var l = console.log;
     l('Usage: ' + $0 + ' [OPTION]');
     l();
-    l('  -h           show this content');
+    l('  -h           show this content and exit');
+    l('  -v           print version number and exit');
     l('  -f <format>  use this video format, default is 360p');
     l('  -bg <color>  set background color, default is blue');
     l('  -fg <color>  set foreground color, default is white');
     l();
     l('  format: 240p, 360p, 480p, 720p, 1080p');
     l('  color: black, red, green, yellow, blue, magenta, cyan, white, 0-255');
+    process.exit(0);
+  case '-v':
+    console.log(require('./package.json').version);
     process.exit(0);
   default:
     var isarg = false;
