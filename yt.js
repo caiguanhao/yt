@@ -287,7 +287,9 @@ function makeDetailsPage() {
     MENU.write('\n');
   }
 
-  MENU.write(ITEM.time + ' - ' + (ITEM.views || 'no views') + '\n');
+  var infobar = ITEM.time + ' - ' + (ITEM.views || 'no views');
+  if (ITEM.duration) infobar += ' - ' + ITEM.duration;
+  MENU.write(infobar + '\n');
 
   var url = ITEM.url, id = ITEM.id, thumburl = ITEM.thumbnails.maxresdefault;
   MENU.on('select', function (label, index) {
@@ -328,7 +330,8 @@ process.stdin.on('data', function(buf) {
   var selected;
 
   if (MENU.detailsPage) {
-    if (codes === '27.91.68') {  // left
+    // left / backspace / escape
+    if ([ '27.91.68', '127', '27' ].indexOf(codes) > -1) {
       selected = MENU._selected;
       MENU.reset();
       MENU.close();
@@ -339,6 +342,8 @@ process.stdin.on('data', function(buf) {
   }
 
   switch (codes) {
+  case '9':                // tab
+  case '32':               // space
   case '27.91.67':         // right
     selected = MENU.selected;
     makeDetailsPage();
@@ -361,6 +366,16 @@ process.stdin.on('data', function(buf) {
         updateMenuItems();
       }
     }
+    break;
+  case '27.91.72':         // home
+    OFFSET = 0;
+    MENU.selected = 0;
+    updateMenuItems();
+    break;
+  case '27.91.70':         // end
+    OFFSET = ITEMS.length - rowMax;
+    MENU.selected = rowMax - 1;
+    updateMenuItems();
     break;
   case '27.91.54.126':     // pagedown
     OFFSET += rowMax;
