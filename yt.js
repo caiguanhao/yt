@@ -20,7 +20,8 @@ var rowMax   = ROWS - 2;
 
 var MENU, OFFSET = 0, RUNNING = {}, ITEMS = [], HASH;
 var INDICATOR_ON = ' ◉ ', INDICATOR_OFF = ' ◯ ';
-var VIDEO_TO_START = 'Play this video', VIDEO_TO_STOP = 'Stop this video';
+var VIDEO_TO_START = 'Play this video in ' + OPTIONS.f;
+var VIDEO_TO_STOP = 'Stop this video';
 
 // the last line of Windows' CMD window always is empty and in input state
 if (isWin32) rowMax -= 1;
@@ -224,7 +225,11 @@ function makeMenuItem(items, index) {
   var title = item.title;
   var duration = item.duration || '';
   if (duration && duration.length === 4) duration = '0' + duration;
-  if (duration) duration = '[' + duration + '] ';
+  if (duration) {
+    duration = '[' + duration + '] ';
+  } else if (item.live) {
+    duration = '[LIVE!] ';
+  }
   var padding = Array(colMax).join(' ');
   var text = indicator + pad(index + 1) + '. ' + duration + title + padding;
   return slice(text, colMax + indLen);
@@ -288,6 +293,7 @@ function makeDetailsPage() {
   }
 
   var infobar = ITEM.time + ' - ' + (ITEM.views || 'no views');
+  if (ITEM.live) infobar += ' (LIVE)';
   if (ITEM.duration) infobar += ' - ' + ITEM.duration;
   MENU.write(infobar + '\n');
 
