@@ -6,6 +6,7 @@ var spawn      = require('child_process').spawn;
 var YTDir      = path.join(getUserHome(), '.config', 'yt');
 var CookieFile = path.join(YTDir, 'cookie.json');
 var CacheFile  = path.join(YTDir, 'cache.json');
+var WinTmpDir  = path.join(getUserHome(), 'AppData', 'Local', 'Temp');
 
 var INSTRUCTIONS = 'No cookie found! Please follow these steps:\n' +
 '1. Open Google Chrome and right click the page and select Inspect Element.\n' +
@@ -17,11 +18,20 @@ var INSTRUCTIONS = 'No cookie found! Please follow these steps:\n' +
 module.exports = {
   checkCookie: checkCookie,
   readCache: readCache,
-  saveCache: saveCache
+  saveCache: saveCache,
+  tempFile: tempFile
 };
 
 function getUserHome() {
   return process.env.HOME || process.env.HOMEPATH || process.env.USERPROFILE;
+}
+
+function tempFile(filename) {
+  if (process.platform === 'win32') {
+    mkdirp(WinTmpDir);
+    return path.join(WinTmpDir, filename);
+  }
+  return '/tmp/' + filename;
 }
 
 function mkdirp(dirpath) {
@@ -113,12 +123,12 @@ function checkCookie() {
     return Q(cookie);
   } else {
     return getClipboard().then(function(content) {
-      var data = content.match(/\b(SID|HSID|SSID|LOGIN_INFO)=(.+?);/g);
+      var data = content.match(/\b(SID|HSID|SSID|LOGIN_INFO)=([a-zA-Z0-9_\-]{1,})/g);
       if (!data || data.length !== 4) throw INSTRUCTIONS;
       var cookie = {};
       for (var i = 0; i < data.length; i++) {
         var d = data[i].split('=', 2);
-        cookie[d[0]] = d[1].slice(0, -1);
+        cookie[d[0]] = d[1];
       }
       saveCookie(cookie);
       return checkCookie();
@@ -129,7 +139,8 @@ function checkCookie() {
 function getClipboard() {
   var cb = {
     darwin: [ 'pbpaste' ],
-    linux: [ 'xclip', [ '-selection', 'clipboard', '-out' ] ]
+    linux: [ 'xclip', [ '-selection', 'clipboard', '-out' ] ],
+    win32: [ 'cscript', [ '/Nologo', path.join(__dirname, 'paste.vbs') ] ]
   }[ process.platform ];
   if (!cb) return Q.reject('No clipboard command for your OS!');
   var deferred = Q.defer();

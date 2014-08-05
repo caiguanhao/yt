@@ -119,7 +119,11 @@ function error(err) {
     MENU.close();
   }
   console.error(err.stack ? err.stack : err);
-  process.kill();
+  try {
+    process.kill();
+  } catch(e) {
+    process.exit(1);
+  }
 }
 
 // serial(2) = [1, 2]  //  serial(5) = [1, 2, 3, 4, 5]
@@ -293,7 +297,7 @@ function makeDetailsPage() {
     } else if (index === 2) {
       MENU.items[2].label = 'Downloading thumbnail...';
       MENU._drawRow(2);
-      var localfile = '/tmp/' + id + '.jpg';
+      var localfile = libdata.tempFile(id + '.jpg');
       var promise;
       if (fs.existsSync(localfile)) {
         promise = Q(localfile);
