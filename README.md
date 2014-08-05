@@ -11,7 +11,7 @@ by date manually. It is very inefficient.
 
 If you installed `yt` globally, you can open your YouTube subscription videos
 from terminal. Requires [livestreamer](https://github.com/chrippa/livestreamer)
-and [VLC player](http://www.videolan.org/vlc/.
+and [VLC player](http://www.videolan.org/vlc/).
 Currently works on Mac OS X and Linux.
 
 ```
@@ -71,7 +71,7 @@ Example output:
     live: false,
     verified: true,
     description: 'This is the way salad is supposed to evolve...',
-    userurl: 'http://www.youtube.com/user/EpicMealTime',
+    userurl: 'https://www.youtube.com/user/EpicMealTime',
     username: 'Epic Meal Time',
     id: 'wfIAjuxbfr4',
     url: 'https://www.youtube.com/watch?v=wfIAjuxbfr4',
