@@ -12,7 +12,7 @@ by date manually. It is very inefficient.
 If you installed `yt` globally, you can open your YouTube subscription videos
 from terminal. Requires [livestreamer](https://github.com/chrippa/livestreamer)
 and [VLC player](http://www.videolan.org/vlc/).
-Currently works on Mac OS X and Linux.
+Currently works on Mac OS X, Linux, Windows.
 
 ```
 pip install livestreamer
