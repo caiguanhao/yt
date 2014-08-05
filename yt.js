@@ -12,6 +12,7 @@ var exec     = require('child_process').exec;
 var spawn    = require('child_process').spawn;
 
 var OPTIONS  = require('./getopts');
+var isWin32  = process.platform === 'win32';
 var COLUMNS  = process.stdout.columns || 80;
 var ROWS     = process.stdout.rows || 24;
 var colMax   = COLUMNS - 4;
@@ -20,6 +21,9 @@ var rowMax   = ROWS - 2;
 var MENU, OFFSET = 0, RUNNING = {}, ITEMS = [], HASH;
 var INDICATOR_ON = ' ◉ ', INDICATOR_OFF = ' ◯ ';
 var VIDEO_TO_START = 'Play this video', VIDEO_TO_STOP = 'Stop this video';
+
+// the last line of Windows' CMD window always is empty and in input state
+if (isWin32) rowMax -= 1;
 
 Q().
 then(function() {
@@ -135,7 +139,7 @@ function serial(n) {
 
 function killall(pid) {
   if (!pid) return;
-  if (process.platform === 'win32') {
+  if (isWin32) {
     return exec('taskkill /pid ' + pid + ' /T /F');
   }
   exec('pgrep -P ' + pid, function(error, stdout, stderr) {
