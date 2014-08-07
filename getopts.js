@@ -2,6 +2,7 @@ var $0   = require('path').basename(process.argv[1]);
 var args = process.argv.slice(2);
 
 var opts = {
+  p: 10,
   f: '360p',
   bg: 'blue',
   fg: 'white'
@@ -17,6 +18,7 @@ for (var i = args.length - 1; i > -1; i--) {
     l();
     l('  -h           show this content and exit');
     l('  -v           print version number and exit');
+    l('  -p <pages>   get number of pages of videos, default is 10');
     l('  -f <format>  use this video format, default is 360p');
     l('  -bg <color>  set background color, default is blue');
     l('  -fg <color>  set foreground color, default is white');

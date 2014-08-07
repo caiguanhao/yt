@@ -37,7 +37,7 @@ then(function() {
 }).
 then(function(cookie) {
   if (!MENU) process.stdout.write('Retrieving list of videos ... ');
-  var pagesNeeded = 10;
+  var pagesNeeded = OPTIONS.p;
   return libapi.subscription.get(serial(pagesNeeded), cookie);
 }).
 then(function(data) {
