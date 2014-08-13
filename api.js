@@ -137,8 +137,12 @@ function analyze(content) {
         ret[feedItem].userurl = 'https://www.youtube.com' + attribs.href;
       } else if (name === 'div' && hasClass('yt-lockup-meta')) {
         isMetaData = 1;
-      } else if (isMetaData > 0 && name === 'li') {
-        isMetaData++;
+      } else if (isMetaData > 0) {
+        if (name === 'li') isMetaData++;
+        if (attribs['data-timestamp']) {
+          var date = new Date(+attribs['data-timestamp'] * 1000).toJSON();
+          ret[feedItem].time = date.replace(/\..*$/, '').replace('T', ' ');
+        }
       } else if (name === 'div' && hasClass('yt-lockup-description')) {
         isDescription = 1;
       } else if (name === 'li' && hasClass('feed-item-container')) {
@@ -168,13 +172,15 @@ function analyze(content) {
         ret[feedItem].username = text;
         isUserName = 0;
       } else if (isMetaData) {
-        var key = {
-          2: 'time',
-          4: 'views'
-        }[isMetaData];
-        if (key) {
-          ret[feedItem][key] = text;
+        switch (isMetaData) {
+        case 2:
+          ret[feedItem].time = entities.decodeHTML(text);
           isMetaData++;
+          break;
+        case 4:
+          ret[feedItem].views = entities.decodeHTML(text);
+          isMetaData++;
+          break;
         }
       } else if (isDescription) {
         ret[feedItem].description += entities.decodeHTML(text) + ' ';
