@@ -31,6 +31,7 @@ Run `yt -h` for available command-line options.
 * :arrow_backward: (Left / Backspace / Esc) Back to list
 * :arrow_up_small::arrow_down_small: Scroll up / down
 * :arrow_double_up::arrow_double_down: (Shift) Page up / down
+* :arrow_double_up::arrow_double_down: Show details of prev / next video
 * :arrow_up_down: (Shift) Home / End
 
 ## API

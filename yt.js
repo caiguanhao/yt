@@ -245,6 +245,7 @@ function makeDetailsPage() {
   var ITEM = ITEMS[selected + OFFSET];
   MENU = termMenu({ width: colMax, fg: OPTIONS.fg, bg: OPTIONS.bg });
   MENU.detailsPage = true;
+  MENU._selected = selected;
   MENU.reset();
 
   MENU.write('Title:\n');
@@ -343,6 +344,18 @@ process.stdin.on('data', function(buf) {
       MENU.close();
       makeMenu();
       if (selected > -1) MENU.selected = selected;
+    } else if (codes === '27.91.54.126') {
+      if (MENU._selected + OFFSET >= ITEMS.length - 1) return;
+      selected = MENU.selected;
+      MENU.selected = MENU._selected + 1;
+      makeDetailsPage();
+      MENU.selected = selected;
+    } else if (codes === '27.91.53.126') {
+      if (MENU._selected + OFFSET < 1) return;
+      selected = MENU.selected;
+      MENU.selected = MENU._selected - 1;
+      makeDetailsPage();
+      MENU.selected = selected;
     }
     return;
   }
